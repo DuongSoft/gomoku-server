@@ -1,3 +1,5 @@
+"use strict"
+
 const NUMBER_TO_WIN = 5;
 const NULL = 0;
 const WHITE = 1;
@@ -227,4 +229,4 @@ class Board {
 	}
 }
 
-module.exports.Board;
+module.exports = Board;
