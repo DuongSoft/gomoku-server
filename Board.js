@@ -26,11 +26,13 @@ class Board {
 	constructor() {
 		this.numRows = ROWS;
 		this.numCols = COLS;
-		this.lastRowIdx = 0;
-		this.lastColIdx = 0;
+		this.reset();
 	}
 
 	reset() {
+		this.lastRowIdx = 0;
+		this.lastColIdx = 0;
+		this.winSequence = [];
 		this.tiles = [];
 		for (var i = 0; i < this.numRows; i++) {
 			this.tiles[i] = [];
@@ -42,9 +44,12 @@ class Board {
 
 	checkWin() {
 		var currentTile = this.tiles[this.lastRowIdx][this.lastColIdx];
+		return (this.checkHorizontal(currentTile) || this.checkVertical(currentTile) ||
+				this.checkBackDiagonal(currentTile) || this.checkForwardDiagonal(currentTile));
 	}
 
 	checkHorizontal(currentTile) {
+		// console.log('checkHorizontal');
 		var row = this.lastRowIdx;
 		var column = this.lastColIdx;
 		var maxOffset = NUMBER_TO_WIN - 1;
@@ -70,12 +75,15 @@ class Board {
 		}
 
 		if (count >= NUMBER_TO_WIN) {
-			return currentTile;
+			// console.log("win horizontal");
+			return true;
 		}
-		return NULL;		
+		// console.log("not win horizontal");
+		return false;		
 	}
 
 	checkVertical(currentTile) {
+		// console.log('checkVertical');
 		var row = this.lastRowIdx;
 		var column = this.lastColIdx;
 		var maxOffset = NUMBER_TO_WIN - 1;
@@ -101,26 +109,36 @@ class Board {
 		}
 
 		if (count >= NUMBER_TO_WIN) {
-			return currentTile;
+			// console.log("win vertical");
+			return true;
 		}
-		return NULL;		
+		// console.log("not win vertical");
+		return false;		
 	}
 
 	checkBackDiagonal(currentTile) {
+		// console.log('checkBackDiagonal');
 		var row = this.lastRowIdx;
 		var column = this.lastColIdx;
 		var maxOffset = NUMBER_TO_WIN - 1;
 		var count = 0;
-		
 		var jMin = column - maxOffset;
-		var jMin = jMin > -1 ? jMin : 0;
 		var jMax = column + maxOffset;
-		var jMax = jMax < this.numCols ? jMax : this.numCols - 1;		
+		var jMax = jMax < this.numCols ? jMax : this.numCols - 1;	
 		var iMin = row - maxOffset;
-		var iMin = iMin > -1 ? iMin : 0;
 		var iMax = row + maxOffset;
 		var iMax = iMax < this.numRows ? iMax : this.numRows - 1;
-
+		if (row > column) {
+			if (jMin < 0) {
+				jMin = 0;
+				iMin = row - column;
+			}
+		} else {
+			if (iMin < 0) {
+				iMin = 0;
+				jMin = column - row;
+			}
+		}
 		this.winSequence = [];
 		
 		for (var i = iMin, j = jMin; i <= iMax; i++, j++) {
@@ -136,12 +154,15 @@ class Board {
 		}
 
 		if (count >= NUMBER_TO_WIN) {
-			return currentTile;
+			// console.log ("win back diagonal");
+			return true;
 		}
-		return NULL;		
+		// console.log ("not win back diagonal");
+		return false;		
 	}	
 
 	checkForwardDiagonal (currentTile) {
+		// console.log('checkForwardDiagonal');
 		var row = this.lastRowIdx;
 		var column = this.lastColIdx;
 		var maxOffset = NUMBER_TO_WIN - 1;
@@ -172,16 +193,14 @@ class Board {
 		}
 
 		if (count >= NUMBER_TO_WIN) {
-			return currentTile;
+			// console.log ("win forward diagonal");
+			return true;
 		}
-		return NULL;
+		// console.log ("not win forward diagonal");
+		return false;
 	}
 
 	setTileIndex (row, col, index) {
-		if (row < 0 || row > this.numRows || col < 0 || col > this.numCols) {
-			throw new IndexOutOfBoundException("");
-		}
-
 		if (row < 0) {
 			throw new IndexOutOfBoundException("Row index must be greater than or equal to 0");
 		}
