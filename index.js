@@ -84,7 +84,7 @@ var joinGame = function(userInfo) {
 			console.log(e);
 			if (e.name == 'GameStartedException') {
 				this.emit('joinGameFailed', {
-					message: 'GameStartedException'
+					message: 'The game is already started'
 				}); 
 			} else {
 				this.emit('joinGameFailed', {
@@ -142,9 +142,9 @@ var ready = function() {
 
 var disconnect = function() {
 	console.log('Client with id = ' + this.id + ' disconnected');
-	var client;
-	if (client = game.getClientById(this.id)) {
-		io.emit('opponentDisconnected');
+	if (game.getClientById(this.id)) {
+		var opponent = game.getOpponentById(this.id)
+		io.to(opponent.id).emit('opponentDisconnected');
 		game.reset();
 	} 	
 }

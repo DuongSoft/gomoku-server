@@ -80,6 +80,15 @@ class Game {
 		return null;
 	}
 
+	getOpponentById(id) {
+		for (var i = 0; i < this.clients.length; i++) {
+			if (this.clients[i].id != id) {
+				return this.clients[i];
+			}
+		}
+		return null;
+	}
+
 	setReadyById(id) {
 		for (var i = 0; i < this.clients.length; i++) {
 			if (this.clients[i].id == id) {
