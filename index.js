@@ -82,9 +82,9 @@ var joinGame = function(userInfo) {
 			console.log("Player " + id + " joined game");
 		} catch (e) {
 			console.log(e);
-			if (e.name == "GameStartedException") {
+			if (e.name == 'GameStartedException') {
 				this.emit('joinGameFailed', {
-					message: e.message
+					message: 'GameStartedException'
 				}); 
 			} else {
 				this.emit('joinGameFailed', {
