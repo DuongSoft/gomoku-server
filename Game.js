@@ -24,56 +24,64 @@ class Game {
 	}
 
 	reset() {
-		this.clients = [];
+		this.players = [];
 		this.board.reset();
 		this.currentPlayerColor = WHITE;
 		this.gameCount = 0;
 		this.gameReady = true;
-		this.readyNumber = this.clients.length;
+		this.readyNumber = this.players.length;
 	}
 
 	restart() {
 		this.board.reset();
 		this.gameCount++;
 		this.currentPlayerColor = this.gameCount % 2 == 1 ? BLACK : WHITE;
-		this.clients[0].ready = false;
-		this.clients[1].ready = false;
+		this.players[0].ready = false;
+		this.players[1].ready = false;
 		this.gameReady = false;
 		this.readyNumber = 0;
 	}
 
-	addClient(client) {
-		if (this.clients.length == 0) {
-			client.color = WHITE;
-			this.clients.push(client);
+	addPlayer(player) {
+		if (this.players.length == 0) {
+			player.color = WHITE;
+			this.players.push(player);
 			return 1;
-		} else if (this.clients.length == 1) {
-			client.color = BLACK;
-			this.clients.push(client);
+		} else if (this.players.length == 1) {
+			player.color = BLACK;
+			this.players.push(player);
 			return 2;
 		} else {
 			throw new GameStartedException("The game is already started");
 		}
 	}
 
-	getClientNo(no) {
-		return this.clients[no];
-	}
-
-	getClientById(id) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].id == id) {
-				return this.clients[i];
+	removePlayerById(id) {
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].id == id) {
+				return this.players.splice(i, 0);
 			}
 		}
-
-		return null;
 	}
 
-	getClientByColor(color) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].color == color) {
-				return this.clients[i];
+	getPlayerNo(no) {
+		return this.players[no];
+	}
+
+	// getPlayerById(id) {
+	// 	for (var i = 0; i < this.players.length; i++) {
+	// 		if (this.players[i].id == id) {
+	// 			return this.players[i];
+	// 		}
+	// 	}
+
+	// 	return null;
+	// }
+
+	getPlayerByColor(color) {
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].color == color) {
+				return this.players[i];
 			}
 		}
 
@@ -81,20 +89,24 @@ class Game {
 	}
 
 	getOpponentById(id) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].id != id) {
-				return this.clients[i];
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].id != id) {
+				return this.players[i];
 			}
 		}
 		return null;
 	}
 
+	getPlayersNumber() {
+		return this.players.length;
+	}
+
 	setReadyById(id) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].id == id) {
-				this.clients[i].ready = true;
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].id == id) {
+				this.players[i].ready = true;
 				this.readyNumber++;
-				if (this.readyNumber == this.clients.length) {
+				if (this.readyNumber == this.players.length) {
 					return true;
 				}
 			}
@@ -103,8 +115,8 @@ class Game {
 	}
 
 	checkIsPlayingById(id) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].id == id) {
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].id == id) {
 				return true;
 			}
 		}
@@ -113,9 +125,9 @@ class Game {
 	}
 
 	checkToTurnById(id) {
-		for (var i = 0; i < this.clients.length; i++) {
-			if (this.clients[i].id == id) {
-				if (this.clients[i].color == this.currentPlayerColor)
+		for (var i = 0; i < this.players.length; i++) {
+			if (this.players[i].id == id) {
+				if (this.players[i].color == this.currentPlayerColor)
 				{
 					return true;
 				}
@@ -130,8 +142,8 @@ class Game {
 
 	setTileIndex(row, col) {
 		try {
-			for (var i = 0; i < this.clients.length; i++) {
-				if (this.clients[i].ready == false) {
+			for (var i = 0; i < this.players.length; i++) {
+				if (this.players[i].ready == false) {
 					throw new GameNotReadyException("The game is not ready yet");
 				}
 			}
@@ -145,8 +157,8 @@ class Game {
 			this.prevPlayerColor = this.currentPlayerColor;
 			this.currentPlayerColor = (this.currentPlayerColor == WHITE ? BLACK : WHITE);
 			this.onTurnChanged && this.onTurnChanged(row, col, 
-					this.getClientByColor(this.currentPlayerColor).id,
-					this.getClientByColor(this.prevPlayerColor).id,
+					this.getPlayerByColor(this.currentPlayerColor).id,
+					this.getPlayerByColor(this.prevPlayerColor).id,
 					winSequence);
 		} catch (e) {
 			throw e;

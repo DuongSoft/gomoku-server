@@ -3,24 +3,25 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var Game = require('./Game.js');
 
-var game = null;
+var games = null;
 
 server.listen(process.env.PORT || 8080, function() {
 	console.log('_____Server started_____');
-	game = new Game(
-		function(row, col, currentPlayerId, prevPlayerId, winSequence) {
-			var msg = {
-				row: row,
-				col: col
-			}
-			if (winSequence) {
-				msg.sequence = winSequence;
-				game.restart();
-			}
-			io.to(currentPlayerId).emit('turnBegan', msg);
-			io.to(prevPlayerId).emit('turnEnded', msg);
-		}
-	);
+	games = {};
+	// game = new Game(
+	// 	function(row, col, currentPlayerId, prevPlayerId, winSequence) {
+	// 		var msg = {
+	// 			row: row,
+	// 			col: col
+	// 		}
+	// 		if (winSequence) {
+	// 			msg.sequence = winSequence;
+	// 			game.restart();
+	// 		}
+	// 		io.to(currentPlayerId).emit('turnBegan', msg);
+	// 		io.to(prevPlayerId).emit('turnEnded', msg);
+	// 	}
+	// );
 });
 
 app.get('/', function (req, res) {
@@ -29,11 +30,17 @@ app.get('/', function (req, res) {
 	});
 });
 
+app.get('/games', function(req, res) {
+	res.json(games);
+});
+
 io.on('connection', function (socket) {
 	console.log('New client connected, id = ' + socket.id);
 	// socket.emit('news', { hello: 'world' });
 
 	socket.on('hello', hello.bind(socket));
+
+	socket.on('createGame', createGame.bind(socket));
 
 	socket.on('joinGame', joinGame.bind(socket));
 
@@ -49,35 +56,96 @@ var hello = function(userInfo) {
 		message: 'Hello, ' + userInfo,
 		id: this.id
 	});
-}
+};
 
-var joinGame = function(userInfo) {
-	var id = userInfo.id;
+var createGame = function(userInfo) {
+	var id = this.id;
 	var name = userInfo.name;
-	if (!id) {
-		this.emit('joinGameFailed', {
-			message: 'missing id'
-		});
-	} else if (!name) {
+
+	if (!name) {
 		this.emit('joinGameFailed', {
 			message: 'missing name',
 		});
 	} else {
+		var game = new Game(
+			function(row, col, currentPlayerId, prevPlayerId, winSequence) {
+				var msg = {
+					row: row,
+					col: col
+				}
+				if (winSequence) {
+					msg.sequence = winSequence;
+					game.restart();
+				}
+				io.to(currentPlayerId).emit('turnBegan', msg);
+				io.to(prevPlayerId).emit('turnEnded', msg);
+			}
+		);
+		games[id] = game;
+
+		var player = {
+			id: id,
+			name: name,
+			ready: true
+		};
+		game.addPlayer(player);
+
+		this.emit('joinGameSucceeded', {
+			message: 'Please wait for other player'
+		});
+	}
+};
+
+var joinGame = function(userInfo) {
+	var id = this.id;
+	var name = userInfo.name;
+	var gameId = userInfo.gameId;
+	var game = games[gameId];
+	// if (!id) {
+	// 	this.emit('joinGameFailed', {
+	// 		message: 'missing id'
+	// 	});
+	// 	return;
+	// } 
+	if (!name) {
+		this.emit('joinGameFailed', {
+			message: 'missing name'
+		});
+		return;
+	}  
+	if (!gameId) {
+		this.emit('joinGameFailed', {
+			message: 'missing game id'
+		});
+		return;
+	} else {
+		if (!game) {
+			this.emit('joinGameFailed', {
+				message: 'No game with such id'
+			});
+			return;			
+		}
+
 		try {
-			var clientsNum = game.addClient({
+			var playersNum = game.addPlayer({
 				id: id,
 				name: name,
 				ready: true
 			});
-			if (clientsNum == 1) {
+			if (playersNum == 1) {
 				this.emit('joinGameSucceeded', {
 					message: 'Please wait for other player'
-				})
-			} else {
+				});
+			} else if (playersNum == 2) {
 				this.emit('joinGameSucceeded', {
 					message: 'Please enjoy the game!!'
-				})
-				startGame();
+				});
+				games[id] = game;
+				startGame(gameId);
+			} else {
+				this.emit('joinGameFailed', {
+					message: 'Unknow exception - 1'
+				}); 
 			}
 			console.log("Player " + id + " joined game");
 		} catch (e) {
@@ -88,7 +156,7 @@ var joinGame = function(userInfo) {
 				}); 
 			} else {
 				this.emit('joinGameFailed', {
-					message: 'Unknow exception'
+					message: 'Unknow exception - 2'
 				}); 
 			}
 		}
@@ -99,6 +167,7 @@ var setTileIndex = function(userInfo) {
 	var row = userInfo.row;
 	var col = userInfo.col;
 	var id = this.id;
+	var game = games[id];
 
 	if (!game.checkIsPlayingById(id)) {
 		this.emit('setTileIndexFailed', {
@@ -135,31 +204,41 @@ var setTileIndex = function(userInfo) {
 };
 
 var ready = function() {
-	if (game.setReadyById(this.id)) {
+	var id = this.id;
+	var game = games[id];
+	if (game.setReadyById(id)) {
 		io.emit('nextGameStarted');
 	};
-}
+};
 
 var disconnect = function() {
-	console.log('Client with id = ' + this.id + ' disconnected');
-	if (game.getClientById(this.id)) {
-		var opponent = game.getOpponentById(this.id)
-		io.to(opponent.id).emit('opponentDisconnected');
-		game.reset();
-	} 	
-}
+	var id = this.id;
+	console.log('Client with id = ' + id + ' disconnected');
+	var game = games[id];
+	if (game) {
+		var opponent = game.getOpponentById(id)
 
-var startGame = function() {
-	var client1 = game.getClientNo(0);
-	var client2 = game.getClientNo(1);
-	io.to(client1.id).emit('gameStarted', {
+		if (opponent) {
+		io.to(opponent.id).emit('opponentDisconnected');
+		}
+
+		game.removePlayerById(id);
+		games[id] = null;
+	} 	
+};
+
+var startGame = function(gameId) {
+	var game = games[gameId];
+	var player1 = game.getPlayerNo(0);
+	var player2 = game.getPlayerNo(1);
+	io.to(player1.id).emit('gameStarted', {
 		color: 'WHITE',
 		goFirst: true,
-		opponent: client2.name
+		opponent: player2.name
 	});
-	io.to(client2.id).emit('gameStarted', {
+	io.to(player2.id).emit('gameStarted', {
 		color: 'BLACK',
 		goFirst: false,
-		opponent: client1.name
+		opponent: player1.name
 	});
 };
